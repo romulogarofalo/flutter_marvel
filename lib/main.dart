@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import './entities/cardHero.dart';
+import 'dart:math';
 
 void main() {
   runApp(MaterialApp(
@@ -25,24 +27,30 @@ class MarvelState extends State<MarvelData> {
 
   String publicKey = 'f31864d4ecab68341375aa9d98185d26';
   String privateKey = 'bc0b00bee305028a4ac65520c2656e338ef25ea8';
-  String url = 'http://gateway.marvel.com/v1/public/characters?ts=1&apikey=';//+publicKey+'&hash='+ textToMd5('1$publicKey$privateKey'));
+  String url = 'http://gateway.marvel.com/v1/public/characters';
+  var timeStamp = '2';
 
   var data;
 
   String textToMd5 (String text) {
     return md5.convert(utf8.encode(text)).toString();
   }
+  
+  List<CardHero> _listHeros = new List<CardHero>();
 
-  Future<String> getMarvelData() async {
-    print('$url$publicKey&hash='+textToMd5('1$publicKey$privateKey')+'&limit=10');
-    var res = await http.get('$url$publicKey&hash='+textToMd5('1'+privateKey+publicKey)+'&limit=10');
-    print(json.decode(res.body));
-    setState((){
-      Map<String, dynamic> user = json.decode(res.body);
-      data = user;
-    });
+  Future<List<CardHero>> getMarvelData() async {
+    var res = await http.get('$url?ts=$timeStamp&apikey=$publicKey&hash='+textToMd5(timeStamp+privateKey+publicKey)+'&limit=10');
+    print('$url?ts=$timeStamp&apikey=$publicKey&hash='+textToMd5(timeStamp+privateKey+publicKey)+'&limit=6');
+    var listHeros = List<CardHero>();
+    print(timeStamp);
+    var jsonDecodado = json.decode(res.body);
+    //1568340199107
     
-    return "Success!";
+    jsonDecodado['data']['results'].forEach((element) => 
+      listHeros.add(CardHero.fromJson(element))
+    );
+
+    return listHeros;
   }
 
   @override
@@ -51,45 +59,27 @@ class MarvelState extends State<MarvelData> {
       appBar: AppBar(
         title: Text("Marvel API"),
       ),
-      body: Center(
-        child: 
-          // data['data']['results'].map((item) =>
-          //   print(item.toString()),
-          listeTeste(context)
-            // CustomCard(
-            //   urlImage: ((data['data']['results'][0]['thumbnail']['path']).toString() +'.'+ data['data']['results'][0]['thumbnail']['extension']),
-            //   name: 'romulo'
-            // )
-          //)
+      body: ListView.builder(
+        itemBuilder: (context, index) {
+          return CustomCard(
+            name: _listHeros[index].name,
+            urlImage: _listHeros[index].urlImage,
+          );
+        },
+        itemCount: _listHeros.length,
       )
     );
   }
   @override
   void initState() {
     super.initState();
-    this.getMarvelData();
-  }
-
-  Widget getTextWidgets(List<String> strings){
-    return new Row(children: strings.map((item) => new Text(item)).toList());
-  }
-
-  Widget listeTeste(BuildContext context){
-    return ListView.builder(
-      
-      padding: EdgeInsets.only(top: 10), 
-      itemCount: data['data']['results'].length, 
-      itemBuilder: (context, index) {
-        return ListTile(title: Text('tetet'));
-      }
-    );
+    this.getMarvelData().then((value) {
+      setState(() {
+        _listHeros.addAll(value);
+      });
+    });
   }
 }
-
-fn(jsonRecive) {
-  return jsonRecive['data']['results'];
-}
-
 
 class CustomCard extends StatelessWidget {
   CustomCard({
@@ -106,7 +96,7 @@ class CustomCard extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Image.network(urlImage),
-          Text('nome do mano $name'),
+          Text(name),
         ],
       )
     );
